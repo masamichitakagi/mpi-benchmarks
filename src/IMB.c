@@ -130,8 +130,10 @@ Return value          (type int)
     
     Type_Size unit_size;
 
-#ifdef USE_MPI_INIT_THREAD
-    if( (ierr=MPI_Init_thread(&argc,&argv,mpi_thread_desired,&mpi_thread_environment))!=MPI_SUCCESS) IMB_err_hand(1, ierr);
+    //#ifdef USE_MPI_INIT_THREAD
+    #if 1
+        int mpi_thread_environment;
+    if( (ierr=MPI_Init_thread(&argc,&argv,MPI_THREAD_MULTIPLE,&mpi_thread_environment))!=MPI_SUCCESS) IMB_err_hand(1, ierr);
 #else
     if( (ierr=MPI_Init(&argc,&argv))!=MPI_SUCCESS) IMB_err_hand(1, ierr);
 #endif /*USE_MPI_INIT_THREAD*/
@@ -154,7 +156,20 @@ Return value          (type int)
 	MPI_Finalize();
 	return 0;
     }
-
+    
+    if(C_INFO.w_rank == 0) {
+        fprintf(unit, "mpi_thread_environment:%d, must be %d\n", mpi_thread_environment, MPI_THREAD_MULTIPLE);
+    }
+    if(mpi_thread_environment != MPI_THREAD_MULTIPLE) {
+        if(C_INFO.w_rank == 0) {
+            fprintf(unit, "mpi_thread_environment(%d) != %d\n", mpi_thread_environment, MPI_THREAD_MULTIPLE);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+        IMB_free_all(&C_INFO, &BList, &ITERATIONS);
+        MPI_Finalize();
+        return 0;    
+    }
+        
     /* IMB 3.1 << */
     IMB_show_selections(&C_INFO,BList,&argc,&argv);
     /* >> IMB 3.1  */
